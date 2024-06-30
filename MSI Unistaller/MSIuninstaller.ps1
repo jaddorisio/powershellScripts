@@ -1,5 +1,5 @@
 # Install Cato SDP Client with logging quiet no restart, log to temp folder
-Start-Process msiexec.exe  -ArgumentList '/i "setup.msi" /qn /norestart /lv C:\temp\catovpn.log' -Wait 
+Start-Process C:\Windows\System32\msiexec.exe  -ArgumentList '/i "setup.msi" /qn /norestart /lv C:\temp\catovpn.log' -Wait 
 
 # Intialize array of display names for the programs to check
 $display_names = @("Absolute", "Netmotion", "DNSFilter")
@@ -19,7 +19,7 @@ foreach ($names in $display_names) {
     $guid = Get-ChildItem -Path $registry_paths | Get-ItemProperty | Where-Object { $_.DisplayName -match $names } |  Select-Object -ExpandProperty PsChildName
 
     if($null -ne $guid) {
-       Start-Process msiexec.exe -ArgumentList "/X `"$guid`" /qn /norestart /lv c:\temp\uninstall_$($names).log" -Wait
+       Start-Process C:\Windows\System32\msiexec.exe -ArgumentList "/X `"$guid`" /qn /norestart /lv c:\temp\uninstall_$($names).log" -Wait
     }
 
 }
