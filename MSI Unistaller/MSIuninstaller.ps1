@@ -1,12 +1,14 @@
-# Install Cato SDP Client with logging quiet no restart, log to temp folder
-Start-Process C:\Windows\System32\msiexec.exe  -ArgumentList '/i "setup.msi" /qn /norestart /lv C:\temp\catovpn.log' -Wait 
+# Intialize array of display names for the programs to check 
+# These 3 are Examples and can be changed as needed, be sure to verify that the product codes exist for name
 
-# Intialize array of display names for the programs to check
 $display_names = @("Absolute", "Netmotion", "DNSFilter")
 
 # Intialize array of Registry directory to check for GUID code
 $registry_paths = "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall", "HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
+
+# Disable any services neccasary before starting uninstall if needed, Comment out as neccsary
+# Example below disable service to prevent loss in network connectivty 
 # Kill VPN Service before Uninstall
 $vpnClient = Get-Service -Name MESSERV
 Stop-Service -InputObject $vpnClient -Force 
