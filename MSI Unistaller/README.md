@@ -7,7 +7,3 @@ This Powershell Script will Uninstall MSI Installed software. This script was cr
 # Installation
 Install Command for intune WIN 32 pac
 %WINDIR%\Sysnative\WindowsPowershell\v1.0\powershell.exe -Executionpolicy Bypass -File .\<scirptNAME>.ps1
-
-# Uninstallation
-Uninstall Command
-msiexec /x "{D5590D86-1E09-4B85-A6E7-51CC42614EB6}" /qn
