@@ -1,7 +1,7 @@
 Import-Module ActiveDirectory
 
 #Create an array of all mclane users in AD
-$mclane_users = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase "DC=MCLANE,DC=COM" -Properties "LastLogonDate"
+$company_users = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase "DC=TEST,DC=COM" -Properties "LastLogonDate"
 
 #Generate Current System Time
 $CurrentTime = Get-Date
@@ -11,7 +11,7 @@ $noLoginDate = @()
 $inactive = @()
 
 #Loop through to build a list of last Login Dates
-foreach ($aduser in $mclane_users) {
+foreach ($aduser in $company_users) {
     
 
     #Compute Days since last login for user with a login date
