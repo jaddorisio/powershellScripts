@@ -1,8 +1,20 @@
-Import-Module ActiveDirectory
+<#
+.SYNOPSIS
+Returns disabled Active Directory users from a search base.
 
-# Creates a list of disabled users
-$disabled_users = Get-ADUser -Filter "Enabled -eq 'False'" -SearchBase "DC=TEST,DC=COM"  | Select-Object -Property "Name"
+.PARAMETER SearchBase
+The AD search base used for the report.
 
-#Prints to PS
-Write-Output "Disabled Users: `n"
-Write-Output $disabled_users
+.EXAMPLE
+.\AD-Disabled-Users.ps1 -SearchBase "OU=Users,DC=contoso,DC=com"
+#>
+[CmdletBinding()]
+param(
+    [string]$SearchBase = "DC=TEST,DC=COM"
+)
+
+Import-Module ActiveDirectory -ErrorAction Stop
+
+Get-ADUser -Filter "Enabled -eq 'False'" -SearchBase $SearchBase |
+    Select-Object Name, SamAccountName, DistinguishedName |
+    Sort-Object Name

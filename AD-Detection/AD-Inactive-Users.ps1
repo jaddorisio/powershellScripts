@@ -1,43 +1,51 @@
-Import-Module ActiveDirectory
+<#
+.SYNOPSIS
+Reports enabled Active Directory users who have been inactive beyond a threshold
+or have never logged on.
 
-#Create an array of all mclane users in AD
-$company_users = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase "DC=TEST,DC=COM" -Properties "LastLogonDate"
+.PARAMETER SearchBase
+The AD search base used for the report.
 
-#Generate Current System Time
-$CurrentTime = Get-Date
+.PARAMETER InactiveDays
+Users older than this number of days since last logon are flagged as inactive.
 
-#Intialize Arrays to Store Data
-$noLoginDate = @()
-$inactive = @()
+.EXAMPLE
+.\AD-Inactive-Users.ps1 -InactiveDays 90
+#>
+[CmdletBinding()]
+param(
+    [string]$SearchBase = "DC=TEST,DC=COM",
+    [ValidateRange(1, 3650)]
+    [int]$InactiveDays = 90
+)
 
-#Loop through to build a list of last Login Dates
-foreach ($aduser in $company_users) {
-    
+Import-Module ActiveDirectory -ErrorAction Stop
 
-    #Compute Days since last login for user with a login date
-    if ($null -ne $aduser.LastLogonDate){
-        $newDateTime = $CurrentTime - $aduser.LastLogonDate
-        
-        if($newDateTime.Days -gt 90){
-            $inactive += ($aduser.Name)
+$currentTime = Get-Date
+$cutoffDate = $currentTime.AddDays(-$InactiveDays)
+$companyUsers = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase $SearchBase -Properties LastLogonDate | Sort-Object Name
+
+$results = foreach ($adUser in $companyUsers) {
+    if ($null -eq $adUser.LastLogonDate) {
+        [pscustomobject]@{
+            Name               = $adUser.Name
+            SamAccountName     = $adUser.SamAccountName
+            LastLogonDate      = $null
+            DaysSinceLastLogon = $null
+            Issue              = "NeverLoggedOn"
+        }
+        continue
+    }
+
+    if ($adUser.LastLogonDate -lt $cutoffDate) {
+        [pscustomobject]@{
+            Name               = $adUser.Name
+            SamAccountName     = $adUser.SamAccountName
+            LastLogonDate      = $adUser.LastLogonDate
+            DaysSinceLastLogon = [int](($currentTime - $adUser.LastLogonDate).TotalDays)
+            Issue              = "Inactive"
         }
     }
-
-    #Account for Users with no login date 
-    else{
-        $noLoginDate += ($aduser.Name)
-    }
-
 }
 
-
-#Prints to PS
-Write-Output "A list of users inactive over 90 days:`n"
-Write-Output $inactive
-Write-Output "`nA list of Never Logged in Users: `n"
-Write-Output $noLoginDate
-
-
-
-
-
+$results | Sort-Object Issue, Name

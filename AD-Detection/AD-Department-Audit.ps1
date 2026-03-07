@@ -1,36 +1,55 @@
-Import-Module ActiveDirectory
+<#
+.SYNOPSIS
+Reports enabled Active Directory users with missing or unexpected department values.
 
-#Create an array of all mclane users in AD
-$company_users = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase "DC=TEST,DC=COM" -Properties "Department"
+.PARAMETER SearchBase
+The AD search base used for the report.
 
+.PARAMETER AllowedDepartments
+Approved department values. Any other value is flagged as invalid.
 
-#List of Allowed Department Names
-$Departments= @("Accounting", 
-                "Real Estate", "Records", "Tax", "Trust Services Group", 
-                "Trusts & Estates") 
+.EXAMPLE
+.\AD-Department-Audit.ps1 -SearchBase "OU=Users,DC=contoso,DC=com"
 
-#Intialize Arrays to Store Data
-$noDepartment = @()
-$incorrectDepartment = @{}
+.EXAMPLE
+.\AD-Department-Audit.ps1 | Export-Csv .\department-audit.csv -NoTypeInformation
+#>
+[CmdletBinding()]
+param(
+    [string]$SearchBase = "DC=TEST,DC=COM",
+    [string[]]$AllowedDepartments = @(
+        "Accounting",
+        "Real Estate",
+        "Records",
+        "Tax",
+        "Trust Services Group",
+        "Trusts & Estates"
+    )
+)
 
+Import-Module ActiveDirectory -ErrorAction Stop
 
+$companyUsers = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase $SearchBase -Properties Department | Sort-Object Name
 
-foreach ($aduser in $company_users) {
-    # Account for user with No Department Names and users with department names that dont match against official dep list
-    if ($null -eq $aduser.Department){
-        $noDepartment += ($aduser.Name)
-               
+$results = foreach ($adUser in $companyUsers) {
+    if ([string]::IsNullOrWhiteSpace($adUser.Department)) {
+        [pscustomobject]@{
+            Name           = $adUser.Name
+            SamAccountName = $adUser.SamAccountName
+            Department     = $null
+            Issue          = "MissingDepartment"
+        }
+        continue
     }
-    elseif ($Departments -cnotcontains $aduser.Department ){
-      
-     $incorrectDepartment.Add($aduser.Name, $aduser.Department)
-    }
-    
 
+    if ($AllowedDepartments -cnotcontains $adUser.Department) {
+        [pscustomobject]@{
+            Name           = $adUser.Name
+            SamAccountName = $adUser.SamAccountName
+            Department     = $adUser.Department
+            Issue          = "InvalidDepartment"
+        }
+    }
 }
 
-#Prints to PS
-Write-Output "Users with No Department: `n"
-$noDepartment
-Write-Output "`nUser with Incorrect Department: `n"
-$incorrectDepartment
+$results | Sort-Object Issue, Name

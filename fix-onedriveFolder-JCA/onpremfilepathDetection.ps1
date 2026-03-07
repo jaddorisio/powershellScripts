@@ -1,41 +1,62 @@
-# Define the registry paths
-$registryPaths = @(
-    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
-    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+<#
+.SYNOPSIS
+Detects shell folder registry values that still reference on-prem file servers.
+
+.DESCRIPTION
+Designed for Intune detection scenarios. The script exits `1` when stale paths are
+found and `0` when the device is clean.
+
+.PARAMETER KnownFileServers
+One or more file server names or UNC fragments to look for.
+
+.EXAMPLE
+.\onpremfilepathDetection.ps1 -KnownFileServers "\\fileserver01","\\legacydfs"
+#>
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$KnownFileServers,
+
+    [string[]]$RegistryPaths = @(
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    )
 )
- 
-$knownFileServers = @("InsertFileServersHere")
-$staleFilePaths = "On-prem reference found: " 
-$containsOldFileserver = $false
- 
-foreach ($path in $registryPaths) {
-    $regdirectorys = Get-ItemProperty -Path $path
- 
-    foreach ($property in $regdirectorys.PSObject.Properties) {
-        $regdirValue = $property.Value
-        $regDirName = $property.Name
- 
-        foreach ($fileserver in $knownFileServers) {
-            try {
-                if ($regdirValue -like "*$fileserver*") {
-                    $containsOldFileserver = $true
-                    $staleFilePaths += " $regdirValue in $regDirName , "
+
+$matches = foreach ($registryPath in $RegistryPaths) {
+    try {
+        $registryValues = Get-ItemProperty -Path $registryPath -ErrorAction Stop
+    }
+    catch {
+        Write-Error ("Failed to read registry path '{0}'. {1}" -f $registryPath, $_.Exception.Message)
+        exit 1
+    }
+
+    foreach ($property in $registryValues.PSObject.Properties) {
+        $value = [string]$property.Value
+
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        foreach ($fileServer in $KnownFileServers) {
+            if ($value -match [regex]::Escape($fileServer)) {
+                [pscustomobject]@{
+                    RegistryPath  = $registryPath
+                    PropertyName  = $property.Name
+                    PropertyValue = $value
+                    MatchedServer = $fileServer
                 }
-            } catch {
-                Write-Output "An error occurred while processing the value '$regdirValue' in path '$path'."
+                break
             }
         }
     }
 }
- 
 
-
-if ($containsOldFileserver -eq $true){
-    Write-Output $staleFilePaths
+if ($matches) {
+    $matches | Sort-Object RegistryPath, PropertyName -Unique
     exit 1
-    
 }
-else{
-    Write-Output "No on-prem locations found"
-    exit 0
-}
+
+Write-Output "No on-prem locations found."
+exit 0

@@ -1,31 +1,45 @@
-Import-Module ActiveDirectory
+<#
+.SYNOPSIS
+Reports enabled Active Directory users with missing or unexpected city values.
 
-#Create an array of all active mclane users in AD and include city property
-$company_users = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase "DC=Test,DC=COM" -Properties "City"
+.PARAMETER SearchBase
+The AD search base used for the report.
 
-#List of Allowed Location in city field
-$Locations= @("City", "Remote")
+.PARAMETER AllowedLocations
+Approved values for the City attribute.
 
-#Intialize Arrays to Store Data
-$noCity = @()
-$incorrectCity = @{}
+.EXAMPLE
+.\AD-Location-Audit.ps1 -AllowedLocations "Remote","New York","Chicago"
+#>
+[CmdletBinding()]
+param(
+    [string]$SearchBase = "DC=TEST,DC=COM",
+    [string[]]$AllowedLocations = @("City", "Remote")
+)
 
-foreach ($aduser in $company_users) {
-    # Account for user with no city property and users with city property that dont match against official allowed location list
-    if ($null -eq $aduser.City){
-        $noCity += ($aduser.Name)
-               
+Import-Module ActiveDirectory -ErrorAction Stop
+
+$companyUsers = Get-ADUser -Filter "Enabled -eq 'True'" -SearchBase $SearchBase -Properties City | Sort-Object Name
+
+$results = foreach ($adUser in $companyUsers) {
+    if ([string]::IsNullOrWhiteSpace($adUser.City)) {
+        [pscustomobject]@{
+            Name           = $adUser.Name
+            SamAccountName = $adUser.SamAccountName
+            City           = $null
+            Issue          = "MissingLocation"
+        }
+        continue
     }
-    elseif ($Locations -cnotcontains $aduser.City ){
-      
-     $incorrectCity.Add($aduser.Name, $aduser.City)
-    }
-    
 
+    if ($AllowedLocations -cnotcontains $adUser.City) {
+        [pscustomobject]@{
+            Name           = $adUser.Name
+            SamAccountName = $adUser.SamAccountName
+            City           = $adUser.City
+            Issue          = "InvalidLocation"
+        }
+    }
 }
 
-#Prints to PS
-Write-Output "Users with No Location: `n"
-$noCity
-Write-Output "`nUser with Incorrect Location: `n"
-$incorrectCity
+$results | Sort-Object Issue, Name

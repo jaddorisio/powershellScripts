@@ -1,68 +1,58 @@
-function Set-ServiceStartupToAutomatic {
-    <#
-    .SYNOPSIS
-        Sets Windows services to automatic startup mode.
-    
-    .DESCRIPTION
-        This function changes the startup type of specified Windows services to Automatic.
-        It requires administrative privileges to modify service configurations.
-    
-    .PARAMETER ServiceName
-        Name of the service(s) to set to automatic startup. Accepts pipeline input and multiple service names.
-    
-    .EXAMPLE
-        Set-ServiceStartupToAutomatic -ServiceName "wuauserv"
-        Changes the Windows Update service to automatic startup.
-    
-    .EXAMPLE
-        "Spooler", "BITS" | Set-ServiceStartupToAutomatic
-        Changes both the Print Spooler and Background Intelligent Transfer Service to automatic startup.
-    
-    .EXAMPLE
-        Set-ServiceStartupToAutomatic -ServiceName "RemoteRegistry"
-        Changes the Remote Registry service to automatic startup.
-    
-    .NOTES
-        Requires administrative privileges to run successfully.
-    #>
-    
-    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact="Medium")]
-    param(
-        [Parameter(Mandatory=$true, 
-                   ValueFromPipeline=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
-        [string[]]$ServiceName
-    )
-    
-    begin {
-        # Check if running with admin privileges
-        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if (-not $isAdmin) {
-            Write-Warning "This function requires administrative privileges to change service startup types."
-        }
-    }
-    
-    process {
-        foreach ($service in $ServiceName) {
-            try {
-                $svc = Get-Service -Name $service -ErrorAction Stop
-                $currentStartType = (Get-WmiObject -Class Win32_Service -Filter "Name='$service'").StartMode
-                
-                if ($currentStartType -eq "Auto") {
-                    Write-Output "Service '$service' is already set to automatic startup."
-                } else {
-                    if ($PSCmdlet.ShouldProcess("Service '$service'", "Set to automatic startup")) {
-                        Set-Service -Name $service -StartupType Automatic
-                        Write-Output "Service '$service' startup type set to automatic."
-                    }
-                }
-            } catch {
-                Write-Error "Failed to set service '$service' to automatic startup. Error: $_"
-            }
-        }
+<#
+.SYNOPSIS
+Sets one or more Windows services to Automatic startup.
+
+.DESCRIPTION
+Use this script when you need a reusable way to standardize service startup
+configuration on Windows endpoints or servers. It must be run with
+administrative privileges.
+
+.PARAMETER ServiceName
+One or more service names to update.
+
+.EXAMPLE
+.\Service-Startup.ps1 -ServiceName RemoteRegistry
+
+.EXAMPLE
+.\Service-Startup.ps1 -ServiceName Spooler, BITS | Format-Table -AutoSize
+#>
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
+param(
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
+    [Alias("Name")]
+    [string[]]$ServiceName
+)
+
+begin {
+    $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    $isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+    if (-not $isAdministrator) {
+        throw "Administrator privileges are required to change service startup types."
     }
 }
 
-# To change Remote Registry to automatic startup
-Set-ServiceStartupToAutomatic -ServiceName "RemoteRegistry"
+process {
+    foreach ($service in $ServiceName) {
+        try {
+            $existingService = Get-Service -Name $service -ErrorAction Stop
+            $escapedName = $existingService.Name.Replace("'", "''")
+            $serviceConfig = Get-CimInstance -ClassName Win32_Service -Filter "Name='$escapedName'" -ErrorAction Stop
+            $wasAutomatic = $serviceConfig.StartMode -eq "Auto"
+
+            if (-not $wasAutomatic -and $PSCmdlet.ShouldProcess($existingService.Name, "Set startup type to Automatic")) {
+                Set-Service -Name $existingService.Name -StartupType Automatic -ErrorAction Stop
+            }
+
+            [pscustomobject]@{
+                ServiceName = $existingService.Name
+                DisplayName = $existingService.DisplayName
+                StartupType = "Automatic"
+                Changed     = -not $wasAutomatic
+            }
+        }
+        catch {
+            Write-Error ("Failed to update service '{0}'. {1}" -f $service, $_.Exception.Message)
+        }
+    }
+}
