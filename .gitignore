@@ -1,0 +1,32 @@
+# PowerShell artifacts
+*.log
+*.tmp
+*.bak
+*.old
+*.orig
+
+# Reports and exports
+*.csv
+exports/
+out/
+reports/
+
+# Packaging artifacts
+*.intunewin
+*.cab
+*.msi
+*.mst
+*.msp
+package/
+dist/
+
+# Analyzer and test output
+PSScriptAnalyzerOutput.*
+TestResults/
+coverage/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
