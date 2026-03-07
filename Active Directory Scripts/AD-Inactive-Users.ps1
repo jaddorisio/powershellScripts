@@ -10,11 +10,13 @@ The AD search base used for the report.
 Users older than this number of days since last logon are flagged as inactive.
 
 .EXAMPLE
-.\AD-Inactive-Users.ps1 -InactiveDays 90
+.\AD-Inactive-Users.ps1 -SearchBase "OU=Users,DC=contoso,DC=com" -InactiveDays 90
 #>
 [CmdletBinding()]
 param(
-    [string]$SearchBase = "DC=TEST,DC=COM",
+    [Parameter(Mandatory = $true)]
+    [string]$SearchBase,
+
     [ValidateRange(1, 3650)]
     [int]$InactiveDays = 90
 )

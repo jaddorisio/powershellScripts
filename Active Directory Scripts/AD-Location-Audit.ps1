@@ -6,15 +6,17 @@ Reports enabled Active Directory users with missing or unexpected city values.
 The AD search base used for the report.
 
 .PARAMETER AllowedLocations
-Approved values for the City attribute.
+Optional approved values for the City attribute. When provided, any other value is flagged as invalid.
 
 .EXAMPLE
-.\AD-Location-Audit.ps1 -AllowedLocations "Remote","New York","Chicago"
+.\AD-Location-Audit.ps1 -SearchBase "OU=Users,DC=contoso,DC=com" -AllowedLocations "Remote","New York","Chicago"
 #>
 [CmdletBinding()]
 param(
-    [string]$SearchBase = "DC=TEST,DC=COM",
-    [string[]]$AllowedLocations = @("City", "Remote")
+    [Parameter(Mandatory = $true)]
+    [string]$SearchBase,
+
+    [string[]]$AllowedLocations
 )
 
 Import-Module ActiveDirectory -ErrorAction Stop
@@ -32,7 +34,7 @@ $results = foreach ($adUser in $companyUsers) {
         continue
     }
 
-    if ($AllowedLocations -cnotcontains $adUser.City) {
+    if ($AllowedLocations -and $AllowedLocations -cnotcontains $adUser.City) {
         [pscustomobject]@{
             Name           = $adUser.Name
             SamAccountName = $adUser.SamAccountName

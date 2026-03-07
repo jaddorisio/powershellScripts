@@ -10,7 +10,8 @@ The AD search base used for the report.
 #>
 [CmdletBinding()]
 param(
-    [string]$SearchBase = "DC=TEST,DC=COM"
+    [Parameter(Mandatory = $true)]
+    [string]$SearchBase
 )
 
 Import-Module ActiveDirectory -ErrorAction Stop

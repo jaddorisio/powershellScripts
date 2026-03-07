@@ -16,7 +16,7 @@ Optional explicit path to the OneDrive sync root. If not provided, the script
 uses `OneDrive - <TenantName>` under the current user's profile.
 
 .EXAMPLE
-.\onedriveFolderRemdiate.ps1 -TenantName "Contoso"
+.\onedriveFolderRemediate.ps1 -TenantName "Contoso"
 #>
 [CmdletBinding()]
 param(

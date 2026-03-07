@@ -6,25 +6,21 @@ Reports enabled Active Directory users with missing or unexpected department val
 The AD search base used for the report.
 
 .PARAMETER AllowedDepartments
-Approved department values. Any other value is flagged as invalid.
+Optional approved department values. When provided, any other value is flagged as invalid.
 
 .EXAMPLE
 .\AD-Department-Audit.ps1 -SearchBase "OU=Users,DC=contoso,DC=com"
 
 .EXAMPLE
-.\AD-Department-Audit.ps1 | Export-Csv .\department-audit.csv -NoTypeInformation
+.\AD-Department-Audit.ps1 -SearchBase "OU=Users,DC=contoso,DC=com" -AllowedDepartments "IT","HR","Finance" |
+    Export-Csv .\department-audit.csv -NoTypeInformation
 #>
 [CmdletBinding()]
 param(
-    [string]$SearchBase = "DC=TEST,DC=COM",
-    [string[]]$AllowedDepartments = @(
-        "Accounting",
-        "Real Estate",
-        "Records",
-        "Tax",
-        "Trust Services Group",
-        "Trusts & Estates"
-    )
+    [Parameter(Mandatory = $true)]
+    [string]$SearchBase,
+
+    [string[]]$AllowedDepartments
 )
 
 Import-Module ActiveDirectory -ErrorAction Stop
@@ -42,7 +38,7 @@ $results = foreach ($adUser in $companyUsers) {
         continue
     }
 
-    if ($AllowedDepartments -cnotcontains $adUser.Department) {
+    if ($AllowedDepartments -and $AllowedDepartments -cnotcontains $adUser.Department) {
         [pscustomobject]@{
             Name           = $adUser.Name
             SamAccountName = $adUser.SamAccountName
