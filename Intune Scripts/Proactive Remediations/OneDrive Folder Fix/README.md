@@ -5,10 +5,8 @@ known folder paths still reference an on-prem location or the wrong profile path
 
 ## Files
 
-- `onpremfilepathDetection.ps1`: Detects stale shell folder references and exits
-  `1` when remediation is needed.
-- `onedriveFolderRemdiate.ps1`: Repoints Desktop, Documents, and Pictures to the
-  user's OneDrive folder and exits `0` on success.
+- `onpremfilepathDetection.ps1`: Detects stale shell folder references and exits `1` when remediation is needed.
+- `onedriveFolderRemdiate.ps1`: Repoints Desktop, Documents, and Pictures to the user's OneDrive folder and exits `0` on success.
 
 ## Example Intune Commands
 
@@ -26,7 +24,5 @@ Remediation:
 
 ## Notes
 
-- Both scripts are written for user-context execution because they modify or read
-  `HKCU`.
-- If your OneDrive folder name does not follow `OneDrive - <TenantName>`, pass
-  `-OneDriveRoot` explicitly to the remediation script.
+- Both scripts are written for user-context execution because they modify or read `HKCU`.
+- If your OneDrive folder name does not follow `OneDrive - <TenantName>`, pass `-OneDriveRoot` explicitly to the remediation script.

@@ -1,4 +1,4 @@
-# AD Detection Scripts
+# Active Directory Scripts
 
 These scripts generate manual AD reports and are intended for admin execution, not
 for Intune detection rules.
@@ -17,9 +17,6 @@ for Intune detection rules.
 - `AD-Location-Audit.ps1`: Finds enabled users with missing or invalid city values.
 
 ## Usage
-
-All scripts now accept `-SearchBase` so they can be reused outside the original
-domain layout.
 
 ```powershell
 .\AD-Inactive-Users.ps1 -SearchBase "OU=Users,DC=contoso,DC=com" -InactiveDays 60
